@@ -12,22 +12,26 @@ class NovaSettings extends Tool
     protected static $cache = [];
     protected static $fields = [];
     protected static $casts = [];
+    protected static $resources = [];
 
     public function boot()
     {
-        Nova::script('nova-settings', __DIR__ . '/../dist/js/tool.js');
+        Nova::script('nova-settings', __DIR__.'/../dist/js/tool.js');
 
         Nova::provideToScript([
             'novaSettings' => [
                 'basePath' => config('nova-settings.base_path', 'nova-settings'),
             ],
         ]);
+
+        Nova::resources(self::$resources);
     }
 
     public function renderNavigation()
     {
         return view('nova-settings::navigation', [
             'fields' => static::$fields,
+            'resources' => static::$resources,
             'basePath' => config('nova-settings.base_path', 'nova-settings'),
         ]);
     }
@@ -57,10 +61,17 @@ class NovaSettings extends Tool
         $path = Str::lower(Str::slug($path));
 
         static::$fields[$path] = static::$fields[$path] ?? [];
-        if (is_callable($fields)) $fields = [$fields];
+        if (is_callable($fields)) {
+            $fields = [$fields];
+        }
         static::$fields[$path] = array_merge(static::$fields[$path], $fields ?? []);
 
         static::$casts = array_merge(static::$casts, $casts ?? []);
+    }
+
+    public static function addSettingsResources($resources = [])
+    {
+        static::$resources = $resources;
     }
 
     /**
@@ -81,8 +92,11 @@ class NovaSettings extends Tool
 
         $fields = [];
         foreach ($rawFields as $rawField) {
-            if (is_array($rawField)) $fields = array_merge($fields, $rawField);
-            else $fields[] = $rawField;
+            if (is_array($rawField)) {
+                $fields = array_merge($fields, $rawField);
+            } else {
+                $fields[] = $rawField;
+            }
         }
 
         return $fields;
@@ -102,28 +116,35 @@ class NovaSettings extends Tool
 
     public static function getSetting($settingKey, $default = null)
     {
-        if (isset(static::$cache[$settingKey])) return static::$cache[$settingKey];
+        if (isset(static::$cache[$settingKey])) {
+            return static::$cache[$settingKey];
+        }
         static::$cache[$settingKey] = static::getSettingsModel()::getValueForKey($settingKey) ?? $default;
+
         return static::$cache[$settingKey];
     }
 
     public static function getSettings(array $settingKeys = null)
     {
-        if (!empty($settingKeys)) {
-            $hasMissingKeys = !empty(array_diff($settingKeys, array_keys(static::$cache)));
+        if (! empty($settingKeys)) {
+            $hasMissingKeys = ! empty(array_diff($settingKeys, array_keys(static::$cache)));
 
-            if (!$hasMissingKeys) return collect($settingKeys)->mapWithKeys(function ($settingKey) {
-                return [$settingKey => static::$cache[$settingKey]];
-            })->toArray();
+            if (! $hasMissingKeys) {
+                return collect($settingKeys)->mapWithKeys(function ($settingKey) {
+                    return [$settingKey => static::$cache[$settingKey]];
+                })->toArray();
+            }
 
             return static::getSettingsModel()::find($settingKeys)->map(function ($setting) {
                 static::$cache[$setting->key] = $setting->value;
+
                 return $setting;
             })->pluck('value', 'key')->toArray();
         }
 
         return static::getSettingsModel()::all()->map(function ($setting) {
             static::$cache[$setting->key] = $setting->value;
+
             return $setting;
         })->pluck('value', 'key')->toArray();
     }
@@ -134,6 +155,7 @@ class NovaSettings extends Tool
         $setting->value = $value;
         $setting->save();
         unset(static::$cache[$settingKey]);
+
         return $setting;
     }
 
