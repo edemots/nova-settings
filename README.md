@@ -29,7 +29,7 @@ Install the package in a Laravel Nova project via Composer and run migrations:
 
 ```bash
 # Install nova-settings
-composer require optimistdigital/nova-settings
+composer require edemots/nova-settings
 
 # Run migrations
 php artisan migrate
@@ -85,6 +85,16 @@ Define the fields in your `NovaServiceProvider`'s `boot()` function by calling `
 ]);
 ```
 
+#### Register Resources pages
+
+Add a resources CRUDS as settings pages.
+
+```php
+\OptimistDigital\NovaSettings\NovaSettings::addSettingsResources([
+    Post::class,
+    User::class
+]);
+```
 
 ### Casts
 
